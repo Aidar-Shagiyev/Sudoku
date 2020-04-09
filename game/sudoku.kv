@@ -1,0 +1,60 @@
+#:kivy 1.11.1
+
+<CellDigit>:
+    multiline: False
+    readonly: True
+    write_tab: False
+    selection_color: 0, 0, 0, 0
+    cursor_width: 0
+    halign: "center"
+    width: self.height
+    font_size: self.height * 0.7
+    padding: self.height * 0.1
+    background_color: 0, 0, 0, 0
+
+<Cell>:
+    grid: grid
+    digit: digit
+
+    canvas.before:
+        Color:
+            rgba: self.bg_color
+        Rectangle:
+            id: bg_color
+            pos: 0, 0
+            size: self.size
+
+    CellDigit:
+        id: digit
+
+    GridLayout:
+        id: grid
+        rows: 3
+        cols: 3
+        padding: 0.07 * self.height
+
+<Game>:
+    Board:
+        id: board
+        rows: 3
+        cols: 3
+        padding: 5
+        spacing: 4
+        pos_hint: {"center_x": 0.5, "top": 1}
+        size_hint_x: min(root.height * 0.9 / root.width, 1)
+        size_hint_y: min(root.width / root.height, 0.9)
+
+        canvas:
+            Color:
+                rgb: 0, 0, 0
+
+    BoxLayout:
+        orientation: "horizontal"
+        pos_hint: {"center_x": 0.5, "top": 0.1}
+        size_hint: (board.width / root.width, 0.1)
+
+        Button:
+            text: "New Game"
+            on_press: board.new_game()
+        Button:
+            text: "Solve"
