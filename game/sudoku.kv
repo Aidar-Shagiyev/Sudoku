@@ -24,6 +24,14 @@
             pos: 0, 0
             size: self.size
 
+    canvas:
+        Color:
+            rgba: 0, 0.9, 1, self.highlight
+        Line:
+            points: 0, 0, 0, self.height, self.width, self.height, self.width, 0
+            width: 1.2
+            close: True
+
     CellDigit:
         id: digit
 

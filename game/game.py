@@ -11,9 +11,11 @@ from kivy.app import App
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.relativelayout import RelativeLayout
-from kivy.properties import ObjectProperty, ListProperty
+from kivy.properties import ObjectProperty, ListProperty, BooleanProperty
 from kivy.uix.textinput import TextInput
 from kivy.uix.label import Label
+from kivy.graphics import Line
+from kivy.graphics import Color
 
 
 class CellDigit(TextInput):
@@ -26,11 +28,41 @@ class CellDigit(TextInput):
             return super().keyboard_on_key_down(window, keycode, text, modifiers)
         return self.parent.on_keyboard(key_str)
 
+    def on_focus(self, instance, value):
+        alpha_change = 0.9
+        green_change = 0.9
+
+        cell = self.parent
+        board = cell.parent.parent
+
+        for i in range(9):
+            if value:
+                board.cells[i][cell.col].bg_color[-1] *= alpha_change
+                board.cells[i][cell.col].bg_color[1] *= green_change
+                board.cells[cell.row][i].bg_color[-1] *= alpha_change
+                board.cells[cell.row][i].bg_color[1] *= green_change
+            else:
+                board.cells[i][cell.col].bg_color[-1] /= alpha_change
+                board.cells[i][cell.col].bg_color[1] /= green_change
+                board.cells[cell.row][i].bg_color[-1] /= alpha_change
+                board.cells[cell.row][i].bg_color[1] /= green_change
+
+        if self.text:
+            for row in range(9):
+                for col in range(9):
+                    other_cell = board.cells[row][col]
+                    if other_cell.digit.text and other_cell.digit.text == self.text:
+                        other_cell.highlight = True
+                    else:
+                        other_cell.highlight = False
+
+
 
 class Cell(RelativeLayout):
     grid = ObjectProperty(None)
     digit = ObjectProperty(None)
-    bg_color = ListProperty([1, 1, 1, 1])
+    bg_color = ListProperty([0.8, 0.8, 0.8, 1])
+    highlight = BooleanProperty(False)
     guesses = ListProperty([0] * 9)
 
     def __init__(self, row, col, **kwargs):
@@ -45,6 +77,7 @@ class Cell(RelativeLayout):
         self.initial = False
         self.row = row
         self.col = col
+        self.outline = None
 
     def on_guesses(self, instance, value):
         for guess, label in zip(value, self.labels):
@@ -61,6 +94,7 @@ class Cell(RelativeLayout):
             guess_index = self.guesses.index(1)
             self.guesses[guess_index] = 0
             self.digit.text = str(guess_index + 1)
+            self.digit.focused = False
         elif key_str == "backspace" and not self.initial:
             self.clean()
         return True
@@ -108,7 +142,9 @@ class Board(GridLayout):
                 cell.clean()
                 if num > 0:
                     cell.digit.text = str(num)
-                    cell.bg_color = [0.8, 0.8, 0.8, 1]
+                    cell.bg_color[0] *= 0.8
+                    cell.bg_color[1] *= 0.8
+                    cell.bg_color[2] *= 0.8
                     cell.initial = True
 
 
