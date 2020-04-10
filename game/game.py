@@ -57,22 +57,21 @@ class CellDigit(TextInput):
                         other_cell.highlight = False
 
 
-
 class Cell(RelativeLayout):
     grid = ObjectProperty(None)
     digit = ObjectProperty(None)
     bg_color = ListProperty([0.8, 0.8, 0.8, 1])
     highlight = BooleanProperty(False)
     guesses = ListProperty([0] * 9)
+    collisions = ListProperty([])
+    collided = BooleanProperty(False)
 
     def __init__(self, row, col, **kwargs):
         super().__init__(**kwargs)
         self.labels = []
         for i in range(9):
             label = Label(color=(0, 0, 0, self.guesses[i]), text=str(i + 1))
-            self.grid.add_widget(
-                label
-            )
+            self.grid.add_widget(label)
             self.labels.append(label)
         self.initial = False
         self.row = row
@@ -82,6 +81,15 @@ class Cell(RelativeLayout):
     def on_guesses(self, instance, value):
         for guess, label in zip(value, self.labels):
             label.color[-1] = guess
+
+    def on_collided(self, instance, value):
+        gb_color_shift = 0.5
+        if self.collided:
+            self.bg_color[1] *= gb_color_shift
+            self.bg_color[2] *= gb_color_shift
+        else:
+            self.bg_color[1] /= gb_color_shift
+            self.bg_color[2] /= gb_color_shift
 
     def on_keyboard(self, key_str):
         if key_str in "123456789":
@@ -95,13 +103,30 @@ class Cell(RelativeLayout):
             self.guesses[guess_index] = 0
             self.digit.text = str(guess_index + 1)
             self.digit.focused = False
+
+            # Check collisions:
+            box = self.parent
+            board = box.parent
+            for i in range(9):
+                for other in [
+                    board.cells[self.row][i],
+                    board.cells[i][self.col],
+                    box.children[i],
+                ]:
+                    if other is not self and other.digit.text == self.digit.text:
+                        other.collisions.append(self)
+                        self.collisions.append(other)
         elif key_str == "backspace" and not self.initial:
             self.clean()
+            for other in self.collisions:
+                other.collisions.remove(self)
+            self.collisions = []
         return True
 
     def clean(self):
         self.digit.text = ""
         self.guesses = self.__class__.guesses.defaultvalue
+        self.highlight = False
 
 
 class Board(GridLayout):
