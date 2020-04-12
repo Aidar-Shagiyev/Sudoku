@@ -157,6 +157,7 @@ class Board(GridLayout):
                     yield cell
 
     def new_game(self):
+        initial_alpha_shift = 0.8
         new_board = [
             [5, 1, 7, 6, 0, 0, 0, 3, 4],
             [2, 8, 9, 0, 0, 4, 0, 0, 0],
@@ -172,11 +173,16 @@ class Board(GridLayout):
             for j, num in enumerate(row):
                 cell = self.cells[i][j]
                 cell.clean()
+                if cell.initial:
+                    cell.bg_color[0] /= initial_alpha_shift
+                    cell.bg_color[1] /= initial_alpha_shift
+                    cell.bg_color[2] /= initial_alpha_shift
+                    cell.initial = False
                 if num > 0:
                     cell.digit.text = str(num)
-                    cell.bg_color[0] *= 0.8
-                    cell.bg_color[1] *= 0.8
-                    cell.bg_color[2] *= 0.8
+                    cell.bg_color[0] *= initial_alpha_shift
+                    cell.bg_color[1] *= initial_alpha_shift
+                    cell.bg_color[2] *= initial_alpha_shift
                     cell.initial = True
 
 
