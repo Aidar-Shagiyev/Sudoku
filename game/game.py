@@ -11,7 +11,12 @@ from kivy.app import App
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.relativelayout import RelativeLayout
-from kivy.properties import ObjectProperty, ListProperty, BooleanProperty
+from kivy.properties import (
+    ObjectProperty,
+    ListProperty,
+    BooleanProperty,
+    StringProperty,
+)
 from kivy.uix.textinput import TextInput
 from kivy.uix.label import Label
 
@@ -46,14 +51,13 @@ class CellDigit(TextInput):
                 board.cells[cell.row][i].bg_color[1] /= green_change
 
         if value and self.text:
-            cell.highlight()
+            board.highlight_digit = self.text
 
 
 class Cell(RelativeLayout):
     grid = ObjectProperty(None)
     digit = ObjectProperty(None)
     bg_color = ListProperty([0.8, 0.8, 0.8, 1])
-    highlighted = BooleanProperty(False)
     guesses = ListProperty([0] * 9)
     collisions = ListProperty([])
     collided = BooleanProperty(False)
@@ -94,8 +98,6 @@ class Cell(RelativeLayout):
             guess_index = self.guesses.index(1)
             self.guesses[guess_index] = 0
             self.digit.text = str(guess_index + 1)
-            self.digit.focused = False
-            self.highlight()
 
             # Check collisions:
             box = self.parent
@@ -109,6 +111,9 @@ class Cell(RelativeLayout):
                     if other is not self and other.digit.text == self.digit.text:
                         other.collisions.append(self)
                         self.collisions.append(other)
+
+            self.digit.focused = False
+            board.highlight_digit = self.digit.text
         elif key_str == "backspace" and not self.initial:
             self.clean()
             for other in self.collisions:
@@ -116,21 +121,14 @@ class Cell(RelativeLayout):
             self.collisions = []
         return True
 
-    def highlight(self):
-        board = self.parent.parent
-        for row in board.cells.values():
-            for cell in row.values():
-                cell.highlighted = False
-        for cell in board.get_cells(self.digit.text):
-            cell.highlighted = True
-
     def clean(self):
         self.digit.text = ""
         self.guesses = self.__class__.guesses.defaultvalue
-        self.highlighted = False
 
 
 class Board(GridLayout):
+    highlight_digit = StringProperty(None)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.cells = {}
@@ -158,6 +156,7 @@ class Board(GridLayout):
 
     def new_game(self):
         initial_alpha_shift = 0.8
+        self.highlight_digit = None
         new_board = [
             [5, 1, 7, 6, 0, 0, 0, 3, 4],
             [2, 8, 9, 0, 0, 4, 0, 0, 0],
