@@ -15,7 +15,7 @@ from kivy.properties import (
     ObjectProperty,
     ListProperty,
     BooleanProperty,
-    StringProperty,
+    StringProperty, NumericProperty
 )
 from kivy.uix.textinput import TextInput
 from kivy.uix.label import Label
@@ -61,6 +61,7 @@ class Cell(RelativeLayout):
     guesses = ListProperty([0] * 9)
     collisions = ListProperty([])
     collided = BooleanProperty(False)
+    highlighted = NumericProperty(0)
 
     def __init__(self, row, col, **kwargs):
         super().__init__(**kwargs)
@@ -156,7 +157,7 @@ class Board(GridLayout):
 
     def new_game(self):
         initial_alpha_shift = 0.8
-        self.highlight_digit = None
+        self.highlight_digit = ""
         new_board = [
             [5, 1, 7, 6, 0, 0, 0, 3, 4],
             [2, 8, 9, 0, 0, 4, 0, 0, 0],
@@ -183,6 +184,9 @@ class Board(GridLayout):
                     cell.bg_color[1] *= initial_alpha_shift
                     cell.bg_color[2] *= initial_alpha_shift
                     cell.initial = True
+
+    def solve(self):
+        pass
 
 
 class Game(FloatLayout):
