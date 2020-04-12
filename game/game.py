@@ -1,4 +1,5 @@
 import itertools
+import random
 import kivy
 
 kivy.require("1.11.1")
@@ -16,10 +17,13 @@ from kivy.properties import (
     ObjectProperty,
     ListProperty,
     BooleanProperty,
-    StringProperty, NumericProperty, DictProperty
+    StringProperty,
+    NumericProperty,
+    DictProperty,
 )
 from kivy.uix.textinput import TextInput
 from kivy.uix.label import Label
+from kivy.clock import Clock
 
 
 class CellDigit(TextInput):
@@ -182,7 +186,73 @@ class Board(GridLayout):
                 cell.initial = True
 
     def solve(self):
-        pass
+        for cell in self.cells.values():
+            if not cell.digit.text:
+                cell.guesses = {num: True for num in "123456789"}
+
+        nums = list("123456789")
+
+        def _highlight(dt):
+            self.highlight_digit = nums[0]
+            Clock.schedule_once(_resolve_guesses, 0.5)
+
+        def _resolve_guesses(dt):
+            num = nums.pop(0)
+            for cell in self.get_cells(num):
+                for i in range(9):
+                    self.cells[cell.row, i].guesses[num] = False
+                    self.cells[i, cell.col].guesses[num] = False
+                    cell.parent.children[i].guesses[num] = False
+            if nums:
+                Clock.schedule_once(_highlight, 0.5)
+            else:
+                Clock.schedule_once(_pick_cell, 0.5)
+
+        def _pick_cell(dt):
+            candidates = []
+            for cell in self.cells.values():
+                if sum(cell.guesses.values()) == 1:
+                    candidates.append(cell)
+            if candidates:
+                self._pick = random.choice(candidates)
+                self._pick.digit.focused = True
+                Clock.schedule_once(_eval_pick, 0.5)
+            else:
+                self.highlight_digit = ""
+                print("Done!")
+
+        def _eval_pick(dt):
+            cell = self._pick
+            if sum(cell.guesses.values()) == 1:
+                guesses = [num for num, guess in cell.guesses.items() if guess]
+                if len(guesses) == 1:
+                    num = guesses[0]
+                    cell.guesses[num] = 0
+                    cell.digit.text = num
+                    cell.digit.focused = False
+                    self.highlight_digit = num
+                    nonlocal nums
+                    nums = [num]
+                    _resolve_guesses(0)
+
+        Clock.schedule_once(_highlight, 0.5)
+
+
+
+
+    def _save(self):
+        saved_cells = {}
+        for (row, col), cell in self.cells.items():
+            to_save = [cell.digit.text, cell.collisions.copy(), cell.guesses.copy()]
+            saved_cells[row, col] = to_save
+        return saved_cells
+
+    def _load(self, saved_cells):
+        for (row, col), cell in self.cells.items():
+            from_save = saved_cells[row, col]
+            cell.digit.text = from_save[0]
+            cell.collisions = from_save[1]
+            cell.guesses = from_save[2]
 
 
 class Game(FloatLayout):
