@@ -16,7 +16,7 @@ from kivy.properties import (
     ObjectProperty,
     ListProperty,
     BooleanProperty,
-    StringProperty, NumericProperty
+    StringProperty, NumericProperty, DictProperty
 )
 from kivy.uix.textinput import TextInput
 from kivy.uix.label import Label
@@ -59,7 +59,7 @@ class Cell(RelativeLayout):
     grid = ObjectProperty(None)
     digit = ObjectProperty(None)
     bg_color = ListProperty([0.8, 0.8, 0.8, 1])
-    guesses = ListProperty([0] * 9)
+    guesses = DictProperty({num: False for num in "123456789"})
     collisions = ListProperty([])
     collided = BooleanProperty(False)
     highlighted = NumericProperty(0)
@@ -67,8 +67,8 @@ class Cell(RelativeLayout):
     def __init__(self, row, col, **kwargs):
         super().__init__(**kwargs)
         self.labels = []
-        for i in range(9):
-            label = Label(color=(0, 0, 0, self.guesses[i]), text=str(i + 1))
+        for num in "123456789":
+            label = Label(color=(0, 0, 0, self.guesses[num]), text=num)
             self.grid.add_widget(label)
             self.labels.append(label)
         self.initial = False
@@ -77,8 +77,8 @@ class Cell(RelativeLayout):
         self.outline = None
 
     def on_guesses(self, instance, value):
-        for guess, label in zip(value, self.labels):
-            label.color[-1] = guess
+        for num, label in zip("123456789", self.labels):
+            label.color[-1] = self.guesses[num]
 
     def on_collided(self, instance, value):
         gb_color_shift = 0.5
@@ -93,13 +93,14 @@ class Cell(RelativeLayout):
         if key_str in "123456789":
             if self.digit.text:
                 return True
-            self.guesses[int(key_str) - 1] = 1 - self.guesses[int(key_str) - 1]
+            self.guesses[key_str] = not self.guesses[key_str]
         elif key_str == "enter":
-            if sum(self.guesses) != 1:
+            guesses = [num for num, guess in self.guesses.items() if guess]
+            if len(guesses) != 1:
                 return True
-            guess_index = self.guesses.index(1)
-            self.guesses[guess_index] = 0
-            self.digit.text = str(guess_index + 1)
+            num = guesses[0]
+            self.guesses[num] = 0
+            self.digit.text = num
 
             # Check collisions:
             box = self.parent
@@ -118,14 +119,13 @@ class Cell(RelativeLayout):
             board.highlight_digit = self.digit.text
         elif key_str == "backspace" and not self.initial:
             self.clean()
-            for other in self.collisions:
-                other.collisions.remove(self)
-            self.collisions = []
         return True
 
     def clean(self):
         self.digit.text = ""
         self.guesses = self.__class__.guesses.defaultvalue
+        for other in self.collisions:
+            other.collisions.remove(self)
         self.collisions = []
 
 
