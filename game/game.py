@@ -168,22 +168,28 @@ class Board(GridLayout):
             if cell.digit.text == text:
                 yield cell
 
-    def new_game(self):
+    def new_game(self, dt):
         self.highlight_digit = ""
-        new_board = [
-            [5, 1, 7, 6, 0, 0, 0, 3, 4],
-            [2, 8, 9, 0, 0, 4, 0, 0, 0],
-            [3, 4, 6, 2, 0, 5, 0, 9, 0],
-            [6, 0, 2, 0, 0, 0, 0, 1, 0],
-            [0, 3, 8, 0, 0, 6, 0, 4, 7],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 9, 0, 0, 0, 0, 0, 7, 8],
-            [7, 0, 3, 4, 0, 0, 5, 6, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        ]
+        board = next(
+            self._random_solve(
+                {(row, col): 0 for (row, col) in itertools.product(range(9), repeat=2)}
+            )
+        )
+
+        # Remove some numbers.
+        for row, col in random.sample(board.keys(), 9 * 9):
+            new_board = board.copy()
+            new_board[row, col] = 0
+            solutions = self._get_solves(new_board)
+            next(solutions)
+            try:
+                next(solutions)
+            except StopIteration:
+                board = new_board
+
         for (row, col), cell in self.cells.items():
             cell.clean()
-            num = new_board[row][col]
+            num = board[row, col]
             if num > 0:
                 cell.digit.text = str(num)
                 cell.initial = True
@@ -240,9 +246,6 @@ class Board(GridLayout):
 
         Clock.schedule_once(_highlight, 0.5)
 
-
-
-
     def _save(self):
         saved_cells = {}
         for (row, col), cell in self.cells.items():
@@ -256,6 +259,44 @@ class Board(GridLayout):
             cell.digit.text = from_save[0]
             cell.collisions = from_save[1]
             cell.guesses = from_save[2]
+
+    def _random_solve(self, board: dict):
+        """Generate solves of the board in random order."""
+        for (row, col), num in board.items():
+            if num == 0:
+                break
+        else:
+            yield board
+            return
+        disallowed = set()
+        for i in range(9):
+            disallowed.add(board[row, i])
+            disallowed.add(board[i, col])
+            disallowed.add(board[row // 3 * 3 + i // 3, col // 3 * 3 + i % 3])
+        allowed = set(range(1, 10)) - disallowed
+        for num in random.sample(allowed, len(allowed)):
+            new_board = board.copy()
+            new_board[row, col] = num
+            yield from self._random_solve(new_board)
+
+    def _get_solves(self, board: dict):
+        """Generate solves of the board."""
+        for (row, col), num in board.items():
+            if num == 0:
+                break
+        else:
+            yield board
+            return
+        disallowed = set()
+        for i in range(9):
+            disallowed.add(board[row, i])
+            disallowed.add(board[i, col])
+            disallowed.add(board[row // 3 * 3 + i // 3, col // 3 * 3 + i % 3])
+        allowed = set(range(1, 10)) - disallowed
+        for num in allowed:
+            board[row, col] = num
+            yield from self._get_solves(board)
+        board[row, col] = 0
 
 
 class Game(FloatLayout):

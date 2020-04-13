@@ -1,4 +1,5 @@
 #:kivy 1.11.1
+#:import Clock kivy.clock.Clock
 
 <CellDigit>:
     multiline: False
@@ -65,7 +66,7 @@
 
         Button:
             text: "New Game"
-            on_press: board.new_game()
+            on_press: Clock.schedule_once(board.new_game, 0.1)
         Button:
             text: "Solve"
             on_press: board.solve()
