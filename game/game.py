@@ -67,6 +67,7 @@ class Cell(RelativeLayout):
     collisions = ListProperty([])
     collided = BooleanProperty(False)
     highlighted = NumericProperty(0)
+    initial = BooleanProperty(False)
 
     def __init__(self, row, col, **kwargs):
         super().__init__(**kwargs)
@@ -75,7 +76,6 @@ class Cell(RelativeLayout):
             label = Label(color=(0, 0, 0, self.guesses[num]), text=num)
             self.grid.add_widget(label)
             self.labels.append(label)
-        self.initial = False
         self.row = row
         self.col = col
         self.outline = None
@@ -92,6 +92,17 @@ class Cell(RelativeLayout):
         else:
             self.bg_color[1] /= gb_color_shift
             self.bg_color[2] /= gb_color_shift
+
+    def on_initial(self, instance, value):
+        color_shift = 0.8
+        if value:
+            self.bg_color[0] *= color_shift
+            self.bg_color[1] *= color_shift
+            self.bg_color[2] *= color_shift
+        else:
+            self.bg_color[0] /= color_shift
+            self.bg_color[1] /= color_shift
+            self.bg_color[2] /= color_shift
 
     def on_keyboard(self, key_str):
         if key_str in "123456789":
@@ -131,6 +142,7 @@ class Cell(RelativeLayout):
         for other in self.collisions:
             other.collisions.remove(self)
         self.collisions = []
+        self.initial = False
 
 
 class Board(GridLayout):
@@ -157,7 +169,6 @@ class Board(GridLayout):
                 yield cell
 
     def new_game(self):
-        initial_alpha_shift = 0.8
         self.highlight_digit = ""
         new_board = [
             [5, 1, 7, 6, 0, 0, 0, 3, 4],
@@ -172,17 +183,9 @@ class Board(GridLayout):
         ]
         for (row, col), cell in self.cells.items():
             cell.clean()
-            if cell.initial:
-                cell.bg_color[0] /= initial_alpha_shift
-                cell.bg_color[1] /= initial_alpha_shift
-                cell.bg_color[2] /= initial_alpha_shift
-                cell.initial = False
             num = new_board[row][col]
             if num > 0:
                 cell.digit.text = str(num)
-                cell.bg_color[0] *= initial_alpha_shift
-                cell.bg_color[1] *= initial_alpha_shift
-                cell.bg_color[2] *= initial_alpha_shift
                 cell.initial = True
 
     def solve(self):
