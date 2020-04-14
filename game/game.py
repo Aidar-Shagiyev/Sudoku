@@ -177,15 +177,19 @@ class Board(GridLayout):
         )
 
         # Remove some numbers.
+        delete_count = 0
         for row, col in random.sample(board.keys(), 9 * 9):
             new_board = board.copy()
             new_board[row, col] = 0
-            solutions = self._get_solves(new_board)
-            next(solutions)
+            deleted = (row, col, board[row, col])
+            solutions = self._get_solves(new_board, deleted)
             try:
                 next(solutions)
             except StopIteration:
                 board = new_board
+                delete_count += 1
+                if delete_count > 52:
+                    break
 
         for (row, col), cell in self.cells.items():
             cell.clean()
@@ -279,15 +283,18 @@ class Board(GridLayout):
             new_board[row, col] = num
             yield from self._random_solve(new_board)
 
-    def _get_solves(self, board: dict):
+    def _get_solves(self, board: dict, deleted=None):
         """Generate solves of the board."""
-        for (row, col), num in board.items():
-            if num == 0:
-                break
+        if deleted is not None:
+            row, col, num = deleted
         else:
-            yield board
-            return
-        disallowed = set()
+            for (row, col), num in board.items():
+                if num == 0:
+                    break
+            else:
+                yield board
+                return
+        disallowed = {num}
         for i in range(9):
             disallowed.add(board[row, i])
             disallowed.add(board[i, col])

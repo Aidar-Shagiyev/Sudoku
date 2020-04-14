@@ -66,7 +66,7 @@
 
         Button:
             text: "New Game"
-            on_press: Clock.schedule_once(board.new_game, 0.1)
+            on_press: Clock.schedule_once(board.new_game)
         Button:
             text: "Solve"
             on_press: board.solve()
