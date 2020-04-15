@@ -1,5 +1,6 @@
 import itertools
 import random
+import numpy as np
 import kivy
 
 kivy.require("1.11.1")
@@ -170,25 +171,20 @@ class Board(GridLayout):
 
     def new_game(self, dt):
         self.highlight_digit = ""
-        board = next(
-            self._random_solve(
-                {(row, col): 0 for (row, col) in itertools.product(range(9), repeat=2)}
-            )
-        )
+        board = next(self._random_solve(np.zeros(shape=(9, 9), dtype=int)))
 
         # Remove some numbers.
         delete_count = 0
-        for row, col in random.sample(board.keys(), 9 * 9):
+        for row, col in random.sample(
+            list(itertools.product(range(9), repeat=2)), 9 * 9
+        ):
             new_board = board.copy()
             new_board[row, col] = 0
             deleted = (row, col, board[row, col])
-            solutions = self._get_solves(new_board, deleted)
-            try:
-                next(solutions)
-            except StopIteration:
+            if self._has_unique_solve(new_board, deleted):
                 board = new_board
                 delete_count += 1
-                if delete_count > 52:
+                if delete_count > 55:
                     break
 
         for (row, col), cell in self.cells.items():
@@ -197,6 +193,7 @@ class Board(GridLayout):
             if num > 0:
                 cell.digit.text = str(num)
                 cell.initial = True
+        print("New Game!")
 
     def solve(self):
         for cell in self.cells.values():
@@ -264,14 +261,13 @@ class Board(GridLayout):
             cell.collisions = from_save[1]
             cell.guesses = from_save[2]
 
-    def _random_solve(self, board: dict):
-        """Generate solves of the board in random order."""
-        for (row, col), num in board.items():
-            if num == 0:
-                break
-        else:
+    def _random_solve(self, board: np.array):
+        """Generate solves of the board in random order using backtracking."""
+        zeros = np.argwhere(board == 0)
+        if len(zeros) == 0:
             yield board
             return
+        row, col = zeros[0]
         disallowed = set()
         for i in range(9):
             disallowed.add(board[row, i])
@@ -283,27 +279,46 @@ class Board(GridLayout):
             new_board[row, col] = num
             yield from self._random_solve(new_board)
 
-    def _get_solves(self, board: dict, deleted=None):
-        """Generate solves of the board."""
-        if deleted is not None:
-            row, col, num = deleted
-        else:
-            for (row, col), num in board.items():
-                if num == 0:
-                    break
-            else:
-                yield board
-                return
-        disallowed = {num}
-        for i in range(9):
-            disallowed.add(board[row, i])
-            disallowed.add(board[i, col])
-            disallowed.add(board[row // 3 * 3 + i // 3, col // 3 * 3 + i % 3])
-        allowed = set(range(1, 10)) - disallowed
-        for num in allowed:
+    def _has_unique_solve(self, board: np.array, cell):
+        """Check if the board has more solves when the cell is deleted."""
+
+        def _resolve_guesses(board, guesses, row, col, num):
+            guesses[row, :, num - 1] = np.logical_or(False, board[row, :])
+            guesses[:, col, num - 1] = np.logical_or(False, board[:, col])
+            box_row = row // 3 * 3
+            box_col = col // 3 * 3
+            guesses[
+                box_row : box_row + 3, box_col : box_col + 3, num - 1
+            ] = np.logical_or(
+                False, board[box_row : box_row + 3, box_col : box_col + 3]
+            )
+
+        board = board.copy()
+        guesses = np.ones(shape=(9, 9, 9), dtype=bool)
+        for (row, col), num in np.ndenumerate(board):
+            if num:
+                _resolve_guesses(board, guesses, row, col, num)
+        row, col, num = cell
+        guesses[row, col, num - 1] = False
+        backtrack = []
+        while True:
+            guesses_sum = guesses.sum(axis=2)
+            row, col = np.unravel_index(guesses_sum.argmin(), guesses_sum.shape)
+            possibles = np.argwhere(guesses[row, col]).flatten()
+            if len(possibles) == 0:
+                if not backtrack:
+                    return True
+                board, guesses = backtrack.pop()
+                continue
+            num = possibles[0] + 1
+            if len(possibles) > 1:
+                guesses[row, col, num - 1] = False
+                backtrack.append((board.copy(), guesses.copy()))
             board[row, col] = num
-            yield from self._get_solves(board)
-        board[row, col] = 0
+            guesses[row, col] = True
+            _resolve_guesses(board, guesses, row, col, num)
+            if board.all():
+                return False
 
 
 class Game(FloatLayout):
