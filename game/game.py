@@ -148,6 +148,7 @@ class Cell(RelativeLayout):
 
 class Board(GridLayout):
     highlight_digit = StringProperty(None)
+    new_game_menu = BooleanProperty(True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -169,7 +170,11 @@ class Board(GridLayout):
             if cell.digit.text == text:
                 yield cell
 
-    def new_game(self, dt):
+    def new_game(self, mode, dt):
+        mode_deletes = {"easy": 40, "medium": 47, "hard": 55}
+        assert mode in mode_deletes
+
+        self.new_game_menu = False
         self.highlight_digit = ""
         board = next(self._random_solve(np.zeros(shape=(9, 9), dtype=int)))
 
@@ -184,7 +189,7 @@ class Board(GridLayout):
             if self._has_unique_solve(new_board, deleted):
                 board = new_board
                 delete_count += 1
-                if delete_count > 55:
+                if delete_count > mode_deletes[mode]:
                     break
 
         for (row, col), cell in self.cells.items():

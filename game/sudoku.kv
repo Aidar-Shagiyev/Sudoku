@@ -1,5 +1,6 @@
 #:kivy 1.11.1
 #:import Clock kivy.clock.Clock
+#:import functools functools
 
 <CellDigit>:
     multiline: False
@@ -17,7 +18,9 @@
     grid: grid
     digit: digit
     collided: bool(self.collisions)
-    highlighted: int(bool(self.digit.text) and self.parent.parent.highlight_digit == self.digit.text)
+    highlighted:
+        int(bool(self.digit.text) \
+        and self.parent.parent.highlight_digit == self.digit.text)
 
     canvas.before:
         Color:
@@ -66,7 +69,36 @@
 
         Button:
             text: "New Game"
-            on_press: Clock.schedule_once(board.new_game)
+            on_press: board.new_game_menu = True
         Button:
             text: "Solve"
             on_press: board.solve()
+
+    BoxLayout:
+        orientation: "vertical"
+        pos_hint: {"center_x": 0.5, "top": 1 - self.height / root.height / 2}
+        size_hint_x: 0.5 * board.width / root.width
+        size_hint_y: board.new_game_menu * 0.5 * board.height / root.height
+        height: board.new_game_menu * self.height
+        padding: self.width / 15
+        canvas.before:
+            Color:
+                rgb: 0.4, 0.5, 0.5
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        Label:
+            text: "Difficulty:"
+            font_size: self.height * 0.6
+        Button:
+            text: "Easy"
+            font_size: self.height * 0.4
+            on_press: Clock.schedule_once(functools.partial(board.new_game, "easy"))
+        Button:
+            text: "Medium"
+            font_size: self.height * 0.4
+            on_press: Clock.schedule_once(functools.partial(board.new_game, "medium"))
+        Button:
+            text: "Hard"
+            font_size: self.height * 0.4
+            on_press: Clock.schedule_once(functools.partial(board.new_game, "hard"))
