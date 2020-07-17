@@ -56,7 +56,7 @@ class CellDigit(TextInput):
                 board.cells[cell.row, i].bg_color[-1] /= alpha_change
                 board.cells[cell.row, i].bg_color[1] /= green_change
 
-        if value and self.text:
+        if value and self.text and not board.solving:
             board.highlight_digit = self.text
 
 
@@ -69,6 +69,7 @@ class Cell(RelativeLayout):
     collided = BooleanProperty(False)
     highlighted = NumericProperty(0)
     initial = BooleanProperty(False)
+    backtracked = BooleanProperty(False)
 
     def __init__(self, row, col, **kwargs):
         super().__init__(**kwargs)
@@ -105,7 +106,16 @@ class Cell(RelativeLayout):
             self.bg_color[1] /= color_shift
             self.bg_color[2] /= color_shift
 
+    def on_backtracked(self, instance, value):
+        color_shift = 0.7
+        if value:
+            self.bg_color[2] *= color_shift
+        else:
+            self.bg_color[2] /= color_shift
+
     def on_keyboard(self, key_str):
+        if not key_str:
+            return True
         if key_str in "123456789":
             if self.digit.text:
                 return True
@@ -164,6 +174,8 @@ class Board(GridLayout):
             for row in range(box_row * 3, box_row * 3 + 3):
                 for col in range(box_col * 3, box_col * 3 + 3):
                     box.add_widget(self.cells[row, col])
+        self.solving = False
+        self._saved = []
 
     def get_cells(self, text):
         for cell in self.cells.values():
@@ -176,6 +188,8 @@ class Board(GridLayout):
 
         self.new_game_menu = False
         self.highlight_digit = ""
+        self.solving = False
+        self._saved = []
         board = next(self._random_solve(np.zeros(shape=(9, 9), dtype=int)))
 
         # Remove some numbers.
@@ -201,6 +215,7 @@ class Board(GridLayout):
         print("New Game!")
 
     def solve(self):
+        self.solving = True
         for cell in self.cells.values():
             if not cell.digit.text:
                 cell.guesses = {num: True for num in "123456789"}
@@ -219,47 +234,66 @@ class Board(GridLayout):
                     self.cells[i, cell.col].guesses[num] = False
                     cell.parent.children[i].guesses[num] = False
             if nums:
-                Clock.schedule_once(_highlight, 0.5)
-            else:
-                Clock.schedule_once(_pick_cell, 0.5)
-
-        def _pick_cell(dt):
-            candidates = []
-            for cell in self.cells.values():
-                if sum(cell.guesses.values()) == 1:
-                    candidates.append(cell)
-            if candidates:
-                self._pick = random.choice(candidates)
-                self._pick.digit.focused = True
-                Clock.schedule_once(_eval_pick, 0.5)
+                Clock.schedule_once(_highlight, 0.3)
             else:
                 self.highlight_digit = ""
+                Clock.schedule_once(_pick_cell, 0.3)
+
+        def _pick_cell(dt):
+            candidates = {x: [] for x in range(10)}
+            for cell in self.cells.values():
+                possible = sum(cell.guesses.values())
+                if not cell.digit.text:
+                    candidates[possible].append(cell)
+            for x in range(10):
+                if candidates[x]:
+                    self._pick = candidates[x][0]
+                    self._pick.digit.focused = True
+                    Clock.schedule_once(_eval_pick, 0.5)
+                    return
+            else:
+                for cell in self.cells.values():
+                    cell.backtracked = False
+                    cell.digit.focused = False
+                self.solving = False
                 print("Done!")
 
         def _eval_pick(dt):
             cell = self._pick
-            if sum(cell.guesses.values()) == 1:
-                guesses = [num for num, guess in cell.guesses.items() if guess]
-                if len(guesses) == 1:
-                    num = guesses[0]
-                    cell.guesses[num] = 0
-                    cell.digit.text = num
-                    cell.digit.focused = False
-                    self.highlight_digit = num
-                    nonlocal nums
-                    nums = [num]
-                    _resolve_guesses(0)
+            if cell.backtracked:
+                self._load()
+            guesses = [num for num, guess in cell.guesses.items() if guess]
+            if len(guesses) == 0:
+                assert not cell.digit.text
+                cell.collisions.append(0)
+                cell.backtracked = False
+                self._saved[-1][1].digit.focused = True
+                self._pick = self._saved[-1][1]
+                Clock.schedule_once(_eval_pick, 0.5)
+                return
+            num = guesses[0]
+            cell.guesses[num] = 0
+            cell.backtracked = False
+            if len(guesses) > 1:
+                self._save(cell)
+                cell.backtracked = True
+                cell.guesses = {x: 0 for x in cell.guesses}
+            cell.digit.text = num
+            nonlocal nums
+            nums = [num]
+            _resolve_guesses(0)
 
         Clock.schedule_once(_highlight, 0.5)
 
-    def _save(self):
+    def _save(self, backtracked_cell):
         saved_cells = {}
         for (row, col), cell in self.cells.items():
             to_save = [cell.digit.text, cell.collisions.copy(), cell.guesses.copy()]
             saved_cells[row, col] = to_save
-        return saved_cells
+        self._saved.append((saved_cells, backtracked_cell))
 
-    def _load(self, saved_cells):
+    def _load(self):
+        saved_cells = self._saved.pop()[0]
         for (row, col), cell in self.cells.items():
             from_save = saved_cells[row, col]
             cell.digit.text = from_save[0]
