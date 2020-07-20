@@ -27,13 +27,16 @@ python game.py
 * Both row and column are highlighted for the selected cell.
 * If the selected cell contains a filled in digit, all of the occurrences of the digit are highlighted.
 * If a filled in digit causes a clash, all of the involed parties are highlighted.
+
 ![](gifs/basics.gif)
 
 ### Board generation
 The app is able to procedurally generate puzzles of varying difficulties (with different number of given digits). Each puzzle is guaranteed to have a unique solution.
+
 ![](gifs/new_games.gif)
 
 ### Auto-solver
 The app also has an integrated solver. It first tries to fill in naked singles, and if it can't find one, then it starts to brute-force the puzzle with Depth-first search. 
 It always selects the cell with the least amount of possible digits as a branching point. The branching points (the cells) are colored yellow.
+
 ![](gifs/solve.gif)
