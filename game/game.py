@@ -224,7 +224,7 @@ class Board(GridLayout):
 
         def _highlight(dt):
             self.highlight_digit = nums[0]
-            Clock.schedule_once(_resolve_guesses, 0.5)
+            Clock.schedule_once(_resolve_guesses, 0.2)
 
         def _resolve_guesses(dt):
             num = nums.pop(0)
@@ -234,10 +234,10 @@ class Board(GridLayout):
                     self.cells[i, cell.col].guesses[num] = False
                     cell.parent.children[i].guesses[num] = False
             if nums:
-                Clock.schedule_once(_highlight, 0.3)
+                Clock.schedule_once(_highlight, 0.2)
             else:
                 self.highlight_digit = ""
-                Clock.schedule_once(_pick_cell, 0.3)
+                Clock.schedule_once(_pick_cell, 0.2)
 
         def _pick_cell(dt):
             candidates = {x: [] for x in range(10)}
@@ -249,7 +249,7 @@ class Board(GridLayout):
                 if candidates[x]:
                     self._pick = candidates[x][0]
                     self._pick.digit.focused = True
-                    Clock.schedule_once(_eval_pick, 0.5)
+                    Clock.schedule_once(_eval_pick, 0.2)
                     return
             else:
                 for cell in self.cells.values():
@@ -269,7 +269,7 @@ class Board(GridLayout):
                 cell.backtracked = False
                 self._saved[-1][1].digit.focused = True
                 self._pick = self._saved[-1][1]
-                Clock.schedule_once(_eval_pick, 0.5)
+                Clock.schedule_once(_eval_pick, 0.2)
                 return
             num = guesses[0]
             cell.guesses[num] = 0
@@ -283,7 +283,7 @@ class Board(GridLayout):
             nums = [num]
             _resolve_guesses(0)
 
-        Clock.schedule_once(_highlight, 0.5)
+        Clock.schedule_once(_highlight, 0.2)
 
     def _save(self, backtracked_cell):
         saved_cells = {}
