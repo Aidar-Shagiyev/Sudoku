@@ -26,7 +26,7 @@ python game.py
 ### Basic
 * Both row and column are highlighted for the selected cell.
 * If the selected cell contains a filled in digit, all of the occurrences of the digit are highlighted.
-* If a filled in digit causes a clash, all of the involed parties are highlighted.
+* If a filled in digit causes a clash, all of the involved parties are highlighted.
 
 ![](gifs/basics.gif)
 
